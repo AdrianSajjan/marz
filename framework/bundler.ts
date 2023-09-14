@@ -2,6 +2,7 @@ import path from "path"
 import fs from "fs/promises"
 
 const environment = process.env.NODE_ENV || "development"
+const minify = process.env.MINIFY === "true"
 const isDebug = process.env.DEBUG === "true"
 
 const transpiler = new Bun.Transpiler({ loader: "tsx" })
@@ -22,7 +23,7 @@ async function readTextContentFromFile(path: string) {
 	return Buffer.from(data).toString("utf-8")
 }
 
-export async function bundle(entrypoints: string[], { outDir }: { outDir: string }) {
+export async function bundle(entrypoints: string[], { outDir, publicDir }: { outDir: string; publicDir?: string }) {
 	const outPath = path.resolve(outDir)
 
 	try {
@@ -40,6 +41,8 @@ export async function bundle(entrypoints: string[], { outDir }: { outDir: string
 	const clientOutPath = path.join(outPath, "client")
 
 	await fs.mkdir(clientOutPath)
+	if (publicDir) await fs.cp(publicDir, clientOutPath, { recursive: true })
+
 	await fs.mkdir(path.join(outPath, "server"))
 	await fs.mkdir(path.join(outPath, "server", "routes"))
 
@@ -52,7 +55,7 @@ export async function bundle(entrypoints: string[], { outDir }: { outDir: string
 		splitting: true,
 		format: "esm",
 		outdir: clientOutPath,
-		minify: environment === "production",
+		minify: environment === "production" || minify,
 		define: {
 			"process.env.NODE_ENV": `"${environment}"`,
 		},

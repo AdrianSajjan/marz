@@ -15,6 +15,7 @@ console.timeEnd("create ssr router index")
 console.time("bundle")
 const { manifest } = await bundle(ssrRouterIndex.bundleEntrypoints, {
 	outDir: ".marz",
+	publicDir: "./public",
 })
 console.timeEnd("bundle")
 
