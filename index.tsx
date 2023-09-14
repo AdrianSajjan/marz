@@ -12,9 +12,11 @@ console.time("create ssr router index")
 const ssrRouterIndex = await recursivelyBuildRouterIndex(ssrPagesDir, {}, [])
 console.timeEnd("create ssr router index")
 
+console.time("bundle")
 const { manifest } = await bundle(ssrRouterIndex.bundleEntrypoints, {
 	outDir: ".marz",
 })
+console.timeEnd("bundle")
 
 console.time("create rsc router index")
 const rscRouterIndex = await recursivelyBuildRouterIndex(rscPagesDir, {}, [])

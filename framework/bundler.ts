@@ -6,8 +6,25 @@ const isDebug = process.env.DEBUG === "true"
 
 const transpiler = new Bun.Transpiler({ loader: "tsx" })
 
+async function readTextContentFromFile(path: string) {
+	let offset = 0
+
+	const file = Bun.file(path)
+
+	const stream = file.stream()
+	const data = new Uint8Array(file.size)
+
+	for await (const chunk of stream) {
+		data.set(chunk, offset)
+		offset += chunk.length
+	}
+
+	return Buffer.from(data).toString("utf-8")
+}
+
 export async function bundle(entrypoints: string[], { outDir }: { outDir: string }) {
 	const outPath = path.resolve(outDir)
+
 	try {
 		await fs.rm(outPath, { recursive: true })
 	} catch (e) {
@@ -17,6 +34,7 @@ export async function bundle(entrypoints: string[], { outDir }: { outDir: string
 
 	const ignoredClientDeps = new Set<string>([])
 	const clientDeps = await resolveClientComponentDependencies(entrypoints, ignoredClientDeps)
+
 	if (isDebug) console.log("client deps", clientDeps)
 
 	const clientOutPath = path.join(outPath, "client")
@@ -45,6 +63,7 @@ export async function bundle(entrypoints: string[], { outDir }: { outDir: string
 	console.time("build manifest")
 	// there definitely is a better way to do all this,
 	// this code was thrown together in a half-lucid sleep-deprived state
+
 	const appRoot = path.resolve(path.join(outDir, ".."))
 	const clientDepsMap = Array.from(clientDeps.values()).reduce((acc, dep) => {
 		const fileName = dep.entrypoint.slice(appRoot.length)
@@ -91,7 +110,8 @@ export async function bundle(entrypoints: string[], { outDir }: { outDir: string
 				name: "rsc-server",
 				setup(build) {
 					build.onLoad({ filter: /\.(ts|tsx)$/ }, async (args) => {
-						const code = await Bun.file(args.path).text()
+						const code = await readTextContentFromFile(args.path)
+
 						if (!code.startsWith(`"use client"`) && !code.startsWith(`'use client'`)) {
 							// if not a client component, just return the code and let it be bundled
 							return {
@@ -151,15 +171,15 @@ export async function resolveClientComponentDependencies(
 		console.warn("returning early from resolveClientComponentDependencies. Too many levels of dependency.")
 		return clientDeps
 	}
+
 	for (const entrypoint of entrypoints) {
 		if (processedFiles.has(entrypoint) || ignoredFiles.has(entrypoint)) {
 			continue
 		}
 
-		const file = await Bun.file(entrypoint)
-		const contents = await file.text()
+		const contents = await readTextContentFromFile(entrypoint)
 
-		const depScan = await transpiler.scan(contents)
+		const depScan = transpiler.scan(contents)
 		if (isClientComponent(contents)) {
 			clientDeps.add({ entrypoint, exports: depScan.exports })
 		}

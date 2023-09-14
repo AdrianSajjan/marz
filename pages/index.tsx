@@ -4,9 +4,9 @@ import { Link } from "../framework/client/router"
 import { Delayed } from "../components/delayed"
 import { Time } from "../components/time"
 
-export async function Page() {
+export function Page() {
 	const timeBeforeSleep = new Date()
-	await new Promise((resolve) => setTimeout(resolve, 100))
+	// await new Promise((resolve) => setTimeout(resolve, 100))
 	const timeAfterSleep = new Date()
 	return (
 		<Fragment>
@@ -16,6 +16,7 @@ export async function Page() {
 			<Counter />
 			<br />
 			<Suspense fallback={<p>Suspense loading...</p>}>
+				{/** @ts-ignore */}
 				<Delayed delay={1000} Component={Time} />
 			</Suspense>
 			<Link href="/subdir">go to /subdir</Link>
